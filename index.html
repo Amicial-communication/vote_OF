@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vote — Choix du nom</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #F5F7FA;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 620px; margin: 0 auto; }
+
+  .header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .header .eyebrow {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #888;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #1F4E79;
+    margin-bottom: 6px;
+  }
+  .header p {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.5;
+  }
+
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 14px;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 10px;
+    cursor: grab;
+    user-select: none;
+    transition: border-color .15s, box-shadow .15s, opacity .15s;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .card:active { cursor: grabbing; }
+  .card.dragging { opacity: .35; }
+  .card.over { border-color: #1F4E79; border-width: 1.5px; box-shadow: 0 0 0 3px #1F4E7920; }
+
+  .rank {
+    min-width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .card-body { flex: 1; }
+  .card-nom { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+  .card-baseline { font-size: 12px; color: #666; font-style: italic; margin-top: 2px; }
+  .card-desc { font-size: 12px; color: #999; margin-top: 5px; line-height: 1.5; }
+
+  .grip { color: #ccc; font-size: 20px; margin-top: 4px; }
+
+  .actions { display: flex; gap: 10px; margin-top: 18px; }
+
+  button {
+    padding: 10px 22px;
+    border-radius: 8px;
+    border: 1px solid #d0d7e0;
+    background: transparent;
+    color: #1a1a1a;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .12s;
+  }
+  button:hover { background: #f0f4f8; }
+  button.primary {
+    background: #1F4E79;
+    color: #fff;
+    border-color: #1F4E79;
+  }
+  button.primary:hover { background: #1a4269; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  .msg { font-size: 12px; color: #888; margin-top: 10px; min-height: 18px; }
+  .msg.error { color: #c0392b; }
+
+  /* RÉSULTATS */
+  .results-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1F4E79;
+    margin-bottom: 6px;
+  }
+  .results-sub {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 20px;
+  }
+
+  .result-row {
+    margin-bottom: 14px;
+  }
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+  .result-nom {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .medal { font-size: 16px; }
+  .result-pts {
+    font-size: 13px;
+    color: #888;
+  }
+  .bar-track {
+    background: #e9eef4;
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: #1F4E79;
+    transition: width .6s ease;
+  }
+
+  .thanks-screen {
+    text-align: center;
+    padding: 3rem 0;
+  }
+  .thanks-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+  .thanks-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1F4E79;
+    margin-bottom: 6px;
+  }
+  .thanks-sub {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 24px;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 2rem;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #fff4;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    vertical-align: -2px;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .total-badge {
+    display: inline-block;
+    background: #e8f0f8;
+    color: #1F4E79;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="eyebrow">Conseil de surveillance · Vote confidentiel</div>
+    <h1>Choix du nom</h1>
+    <p>Classez les 5 propositions par ordre de préférence.<br>Votre 1er choix recevra le plus de points.</p>
+  </div>
+
+  <!-- VOTE -->
+  <div id="screen-vote" class="screen active">
+    <div class="hint">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+      Glissez-déposez les cartes pour les classer
+    </div>
+
+    <div id="list"></div>
+
+    <div class="actions">
+      <button class="primary" id="btn-vote" onclick="submitVote()">Valider mon vote</button>
+      <button onclick="resetOrder()">Réinitialiser</button>
+    </div>
+    <p class="msg" id="msg"></p>
+  </div>
+
+  <!-- MERCI -->
+  <div id="screen-thanks" class="screen">
+    <div class="thanks-screen">
+      <div class="thanks-icon">✅</div>
+      <div class="thanks-title">Vote enregistré !</div>
+      <div class="thanks-sub">Merci pour votre participation.</div>
+      <button class="primary" onclick="showResults()">Voir les résultats</button>
+    </div>
+  </div>
+
+  <!-- RÉSULTATS -->
+  <div id="screen-results" class="screen">
+    <div class="results-title">Résultats du scrutin</div>
+    <div class="results-sub">Score pondéré · 1er choix = 5 pts, 2e = 4 pts, 3e = 3 pts, 4e = 2 pts, 5e = 1 pt</div>
+    <div id="total-votes"></div>
+    <div id="results-list"></div>
+    <div style="margin-top:20px;display:flex;gap:10px">
+      <button onclick="showResults()">↻ Rafraîchir</button>
+      <button onclick="resetVote()">Voter à nouveau</button>
+    </div>
+  </div>
+
+  <div class="footer">Vote anonyme · Résultats cumulés en temps réel</div>
+</div>
+
+<script>
+const BIN_ID = "6a1e8259f5f4af5e29abbdcf";
+const API_KEY = "$2a$10$IWT35MZj3g/vMYElXzQlCOqvcBKbtaINZnTC6A2NPBGq1TJXqvAjq";
+const BASE = "https://api.jsonbin.io/v3/b/" + BIN_ID;
+
+const NOMS = [
+  { id:"tomodomo", nom:"Tomodomo", baseline:"Par le domicile, pour le domicile.", desc:"Mot-valise : tomodachi (ami en japonais) + domus (maison en latin). La répétition syllabique évoque un battement de cœur régulier." },
+  { id:"oxilium",  nom:"Oxilium",  baseline:"L'appui qu'il vous faut, quand il le faut.", desc:"Néologisme issu d'auxilium (renfort en latin). Plus court, plus moderne — l'auxiliaire réinventé pour les structures." },
+  { id:"faq",      nom:"FAQ Formation", baseline:"Vos questions, nos réponses. Votre expertise, notre mission.", desc:"Double lecture : Foire Aux Questions + Former · Accompagner · Qualifier. Familier et structuré à la fois." },
+  { id:"auxicoop", nom:"Auxi'coop", baseline:"Les auxiliaires de vos décisions.", desc:"Fusion entre auxiliaire (cœur du métier domicile) et coopération. L'appui sans se substituer, en pairs." },
+  { id:"amicoop",  nom:"Ami'coop",  baseline:"Le domicile s'entraide.", desc:"L'ami sur qui on compte + la logique coopérative. Un partenaire issu du même monde, pas un cabinet extérieur." }
+];
+
+const COLORS  = ["#1F4E79","#2E75B6","#4A90D9","#7BB3E8","#B5D4F4"];
+const BGTINTS = ["#1F4E7918","#2E75B618","#4A90D918","#7BB3E818","#B5D4F418"];
+const MEDALS  = ["🥇","🥈","🥉","4e","5e"];
+const LABELS  = ["1er","2e","3e","4e","5e"];
+
+let order = [...NOMS];
+let dragSrc = null;
+
+function setScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function render() {
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  order.forEach((n, i) => {
+    const d = document.createElement("div");
+    d.className = "card";
+    d.draggable = true;
+    d.dataset.id = n.id;
+    d.innerHTML = `
+      <div class="rank" style="background:${BGTINTS[i]};color:${COLORS[i]}">${LABELS[i]}</div>
+      <div class="card-body">
+        <div class="card-nom">${n.nom}</div>
+        <div class="card-baseline">${n.baseline}</div>
+        <div class="card-desc">${n.desc}</div>
+      </div>
+      <div class="grip">⋮⋮</div>`;
+
+    d.addEventListener("dragstart", e => {
+      dragSrc = n.id;
+      d.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    d.addEventListener("dragend", () => {
+      document.querySelectorAll(".card").forEach(c => c.classList.remove("dragging","over"));
+    });
+    d.addEventListener("dragover", e => {
+      e.preventDefault();
+      document.querySelectorAll(".card").forEach(c => c.classList.remove("over"));
+      d.classList.add("over");
+    });
+    d.addEventListener("drop", e => {
+      e.preventDefault();
+      if (dragSrc === n.id) return;
+      const si = order.findIndex(x => x.id === dragSrc);
+      const di = order.findIndex(x => x.id === n.id);
+      [order[si], order[di]] = [order[di], order[si]];
+      render();
+    });
+
+    list.appendChild(d);
+  });
+}
+
+function resetOrder() {
+  order = [...NOMS];
+  render();
+  document.getElementById("msg").textContent = "";
+  document.getElementById("msg").className = "msg";
+}
+
+async function getVotes() {
+  const r = await fetch(BASE + "/latest", {
+    headers: { "X-Master-Key": API_KEY }
+  });
+  const data = await r.json();
+  return data.record;
+}
+
+async function saveVotes(votes) {
+  await fetch(BASE, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Master-Key": API_KEY
+    },
+    body: JSON.stringify(votes)
+  });
+}
+
+async function submitVote() {
+  const btn = document.getElementById("btn-vote");
+  const msg = document.getElementById("msg");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Envoi en cours…';
+  msg.textContent = "";
+  msg.className = "msg";
+
+  try {
+    const current = await getVotes();
+    order.forEach((n, i) => {
+      current[n.id] = (current[n.id] || 0) + (5 - i);
+    });
+    await saveVotes(current);
+    setScreen("screen-thanks");
+  } catch(e) {
+    msg.textContent = "Erreur lors de l'envoi. Vérifiez votre connexion et réessayez.";
+    msg.className = "msg error";
+    btn.disabled = false;
+    btn.textContent = "Valider mon vote";
+  }
+}
+
+async function showResults() {
+  setScreen("screen-results");
+  const rl = document.getElementById("results-list");
+  const tv = document.getElementById("total-votes");
+  rl.innerHTML = "<p style='font-size:13px;color:#888'>Chargement…</p>";
+
+  try {
+    const votes = await getVotes();
+    const sorted = [...NOMS].sort((a,b) => (votes[b.id]||0) - (votes[a.id]||0));
+    const max = Math.max(...NOMS.map(n => votes[n.id]||0), 1);
+    const totalPts = Object.values(votes).reduce((a,b)=>a+b,0);
+    const totalVoters = Math.round(totalPts / 15);
+
+    tv.innerHTML = `<div class="total-badge">${totalVoters} vote${totalVoters > 1 ? "s" : ""} enregistré${totalVoters > 1 ? "s" : ""}</div>`;
+
+    rl.innerHTML = "";
+    sorted.forEach((n, i) => {
+      const pts = votes[n.id] || 0;
+      const pct = Math.round(pts / max * 100);
+      const medal = i < 3 ? MEDALS[i] : `<span style='font-size:13px;color:#aaa'>${i+1}e</span>`;
+      const d = document.createElement("div");
+      d.className = "result-row";
+      d.innerHTML = `
+        <div class="result-header">
+          <div class="result-nom">${medal} ${n.nom}</div>
+          <div class="result-pts">${pts} pt${pts > 1 ? "s" : ""}</div>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%" data-pct="${pct}"></div></div>`;
+      rl.appendChild(d);
+    });
+
+    requestAnimationFrame(() => {
+      document.querySelectorAll(".bar-fill").forEach(b => {
+        b.style.width = b.dataset.pct + "%";
+      });
+    });
+
+  } catch(e) {
+    rl.innerHTML = "<p style='font-size:13px;color:#c0392b'>Impossible de charger les résultats.</p>";
+  }
+}
+
+function resetVote() {
+  order = [...NOMS];
+  setScreen("screen-vote");
+  render();
+  document.getElementById("msg").textContent = "";
+  document.getElementById("btn-vote").disabled = false;
+  document.getElementById("btn-vote").textContent = "Valider mon vote";
+}
+
+render();
+</script>
+</body>
+</html>
